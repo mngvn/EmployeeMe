@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  role          Role      @default(EMPLOYEE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  employeeProfile  EmployeeProfile?
+  employerProfile  EmployerProfile?
+  accounts         Account[]
+  sessions         Session[]
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+}
+
+enum Role {
+  EMPLOYEE
+  EMPLOYER
+  ADMIN
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model EmployeeProfile {
+  id                 String         @id @default(cuid())
+  userId             String         @unique
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName        String
+  headline           String
+  bio                String?        @db.Text
+  location           String?
+  photoUrl           String?
+  resumeUrl          String?
+  careerFieldId      String
+  careerField        CareerField    @relation(fields: [careerFieldId], references: [id])
+  expertiseLevel     ExpertiseLevel @default(ENTRY)
+  yearsExperience    Int?
+  openToRemote       Boolean        @default(true)
+  openToRelocation   Boolean        @default(false)
+  availabilityStatus Availability   @default(OPEN)
+  visibility         Visibility     @default(PUBLIC)
+  profileViews       Int            @default(0)
+  skills             ProfileSkill[]
+  workExperiences    WorkExperience[]
+  educations         Education[]
+  savedByEmployers   SavedCandidate[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+}
+
+enum ExpertiseLevel {
+  INTERN
+  ENTRY
+  MID
+  SENIOR
+  LEAD
+  PRINCIPAL
+  EXECUTIVE
+}
+
+enum Availability {
+  OPEN
+  PASSIVE
+  NOT_LOOKING
+}
+
+enum Visibility {
+  PUBLIC
+  EMPLOYERS_ONLY
+  HIDDEN
+}
+
+model EmployerProfile {
+  id              String           @id @default(cuid())
+  userId          String           @unique
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName     String
+  companyWebsite  String?
+  industry        String?
+  companySize     String?
+  logoUrl         String?
+  description     String?          @db.Text
+  location        String?
+  verified        Boolean          @default(false)
+  savedCandidates SavedCandidate[]
+  hiringSignals   HiringSignal[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model CareerField {
+  id            String            @id @default(cuid())
+  name          String            @unique
+  slug          String            @unique
+  icon          String?
+  description   String?
+  parentId      String?
+  parent        CareerField?      @relation("Subcategories", fields: [parentId], references: [id])
+  subcategories CareerField[]     @relation("Subcategories")
+  profiles      EmployeeProfile[]
+  hiringSignals HiringSignal[]
+}
+
+model Skill {
+  id       String         @id @default(cuid())
+  name     String         @unique
+  category String?
+  profiles ProfileSkill[]
+}
+
+model ProfileSkill {
+  profileId String
+  skillId   String
+  level     SkillLevel      @default(INTERMEDIATE)
+  profile   EmployeeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill     Skill           @relation(fields: [skillId], references: [id])
+
+  @@id([profileId, skillId])
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+model WorkExperience {
+  id          String          @id @default(cuid())
+  profileId   String
+  profile     EmployeeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title       String
+  company     String
+  startDate   DateTime
+  endDate     DateTime?
+  current     Boolean         @default(false)
+  description String?         @db.Text
+}
+
+model Education {
+  id          String          @id @default(cuid())
+  profileId   String
+  profile     EmployeeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  institution String
+  degree      String?
+  field       String?
+  startYear   Int
+  endYear     Int?
+}
+
+model SavedCandidate {
+  employerProfileId String
+  employeeProfileId String
+  listName          String          @default("Default")
+  note              String?
+  savedAt           DateTime        @default(now())
+  employer          EmployerProfile @relation(fields: [employerProfileId], references: [id], onDelete: Cascade)
+  employee          EmployeeProfile @relation(fields: [employeeProfileId], references: [id], onDelete: Cascade)
+
+  @@id([employerProfileId, employeeProfileId])
+}
+
+model HiringSignal {
+  id                String          @id @default(cuid())
+  employerProfileId String
+  employer          EmployerProfile @relation(fields: [employerProfileId], references: [id], onDelete: Cascade)
+  careerFieldId     String
+  careerField       CareerField     @relation(fields: [careerFieldId], references: [id])
+  expertiseLevel    ExpertiseLevel?
+  description       String?
+  remote            Boolean         @default(false)
+  active            Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  subject    String?
+  body       String   @db.Text
+  read       Boolean  @default(false)
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  createdAt  DateTime @default(now())
+}
