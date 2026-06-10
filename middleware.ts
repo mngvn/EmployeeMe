@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
 const employeeRoutes = ["/dashboard", "/profile/edit", "/profile/preview"];
-const employerRoutes = ["/search", "/saved", "/hiring", "/candidates"];
+const employerRoutes = ["/search", "/saved", "/hiring", "/candidates", "/swipe"];
 const authRequired = [...employeeRoutes, ...employerRoutes, "/messages", "/settings"];
 
 export default auth((req) => {

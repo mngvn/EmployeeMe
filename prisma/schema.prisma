@@ -88,6 +88,7 @@ model EmployeeProfile {
   workExperiences    WorkExperience[]
   educations         Education[]
   savedByEmployers   SavedCandidate[]
+  swipeDecisions     SwipeDecision[]
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 }
@@ -128,6 +129,7 @@ model EmployerProfile {
   verified        Boolean          @default(false)
   savedCandidates SavedCandidate[]
   hiringSignals   HiringSignal[]
+  swipeDecisions  SwipeDecision[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 }
@@ -215,6 +217,23 @@ model HiringSignal {
   remote            Boolean         @default(false)
   active            Boolean         @default(true)
   createdAt         DateTime        @default(now())
+}
+
+model SwipeDecision {
+  id                String          @id @default(cuid())
+  employerProfileId String
+  employeeProfileId String
+  decision          SwipeChoice
+  swipedAt          DateTime        @default(now())
+  employer          EmployerProfile @relation(fields: [employerProfileId], references: [id], onDelete: Cascade)
+  employee          EmployeeProfile @relation(fields: [employeeProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([employerProfileId, employeeProfileId])
+}
+
+enum SwipeChoice {
+  INTERESTED
+  PASSED
 }
 
 model Message {
