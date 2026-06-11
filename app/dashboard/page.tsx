@@ -189,6 +189,7 @@ async function EmployerDashboard({ userId }: { userId: string }) {
       <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <Link href="/" className="text-xl font-bold text-gray-900">EmployeeMe</Link>
         <div className="flex items-center gap-4">
+          <Link href="/swipe" className="text-sm font-medium bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700">🃏 Swipe</Link>
           <Link href="/search" className="text-sm font-medium text-blue-600 hover:text-blue-700">Search candidates</Link>
           <Link href="/saved" className="text-sm text-gray-600 hover:text-gray-900">Saved</Link>
           <Link href="/messages" className="text-sm text-gray-600 hover:text-gray-900">Messages</Link>
@@ -219,6 +220,22 @@ async function EmployerDashboard({ userId }: { userId: string }) {
             <p className="text-sm text-gray-500 mb-1">Active hiring signals</p>
             <p className="text-3xl font-bold text-gray-900">{employer?.hiringSignals.length ?? 0}</p>
           </div>
+        </div>
+
+        {/* Swipe mode CTA */}
+        <div className="rounded-2xl p-6 text-white flex items-center justify-between" style={{ background: "linear-gradient(135deg, #1c1c2e 0%, #2d1b69 100%)" }}>
+          <div>
+            <h2 className="font-semibold text-lg">🃏 Swipe through candidates</h2>
+            <p className="text-gray-300 text-sm mt-1">
+              Tinder-style review — swipe right to add to your interview queue.
+            </p>
+          </div>
+          <Link
+            href="/swipe"
+            className="rounded-lg bg-green-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-400 whitespace-nowrap"
+          >
+            Start swiping →
+          </Link>
         </div>
 
         {/* Quick search CTA */}
