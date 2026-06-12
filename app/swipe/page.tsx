@@ -1,63 +1,58 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
+import { store } from "@/lib/local-store";
+import { MOCK_CANDIDATES } from "@/lib/mock-data";
 import { SwipeInterface } from "@/components/swipe/SwipeInterface";
 
-export default async function SwipePage() {
-  const session = await auth();
-  if (!session || session.user.role !== "EMPLOYER") redirect("/dashboard");
+export default function SwipePage() {
+  const { user, ready } = useAuth();
+  const router = useRouter();
+  const [queue, setQueue] = useState<typeof MOCK_CANDIDATES>([]);
+  const [interestedCount, setInterestedCount] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
-  const employer = await prisma.employerProfile.findUnique({
-    where: { userId: session.user.id },
-  });
-  if (!employer) redirect("/dashboard");
+  useEffect(() => {
+    if (ready && !user) { router.replace("/login"); return; }
+    if (ready && user?.role !== "employer") { router.replace("/dashboard"); return; }
+  }, [ready, user, router]);
 
-  const alreadySwiped = await prisma.swipeDecision.findMany({
-    where: { employerProfileId: employer.id },
-    select: { employeeProfileId: true },
-  });
-  const swipedIds = alreadySwiped.map((s) => s.employeeProfileId);
+  useEffect(() => {
+    if (!ready || !user) return;
+    const swipedIds = new Set(store.getSwipedIds());
+    const unswiped = MOCK_CANDIDATES.filter((c) => !swipedIds.has(c.id));
+    setQueue(unswiped);
+    setInterestedCount(store.getSwipes().filter((s) => s.decision === "INTERESTED").length);
+    setMounted(true);
+  }, [ready, user]);
 
-  const candidates = await prisma.employeeProfile.findMany({
-    where: {
-      visibility: { not: "HIDDEN" },
-      id: { notIn: swipedIds },
-      availabilityStatus: { not: "NOT_LOOKING" },
-    },
-    include: {
-      careerField: true,
-      skills: { include: { skill: true }, take: 6 },
-      workExperiences: { orderBy: { startDate: "desc" }, take: 3 },
-      educations: { orderBy: { startYear: "desc" }, take: 2 },
-    },
-    orderBy: { updatedAt: "desc" },
-    take: 20,
-  });
-
-  const interestedCount = await prisma.swipeDecision.count({
-    where: { employerProfileId: employer.id, decision: "INTERESTED" },
-  });
+  if (!ready || !user || !mounted) return null;
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
-      {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
-        <a href="/dashboard" className="text-lg font-bold text-white">
-          EmployeeMe
-        </a>
+        <Link href="/dashboard" className="text-lg font-bold text-white">EmployeeMe</Link>
         <div className="flex items-center gap-6">
           <span className="text-sm text-gray-400">
             <span className="text-green-400 font-semibold">{interestedCount}</span> interested
           </span>
-          <a href="/saved" className="text-sm text-gray-400 hover:text-white">
-            View shortlist →
-          </a>
+          <Link href="/saved" className="text-sm text-gray-400 hover:text-white">View shortlist →</Link>
         </div>
       </header>
 
-      {/* Swipe area */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
-        <SwipeInterface initialCandidates={JSON.parse(JSON.stringify(candidates))} />
+        <SwipeInterface
+          initialCandidates={queue}
+          onDecision={(id, decision) => {
+            store.addSwipe(id, decision);
+            if (decision === "INTERESTED") {
+              setInterestedCount((n) => n + 1);
+            }
+          }}
+        />
       </div>
     </div>
   );
